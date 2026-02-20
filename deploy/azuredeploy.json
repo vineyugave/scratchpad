@@ -212,17 +212,20 @@
       "comments": "Aurora weather model serverless endpoint",
       "condition": "[parameters('deployAIFoundry')]",
       "type": "Microsoft.MachineLearningServices/workspaces/serverlessEndpoints",
-      "apiVersion": "2024-04-01",
+      "apiVersion": "2025-12-01",
       "name": "[concat(variables('aiProjectName'), '/aurora-endpoint')]",
       "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.MachineLearningServices/workspaces', variables('aiProjectName'))]"
       ],
       "properties": {
+        "authMode": "Key",
+        "contentSafety": {
+          "contentSafetyStatus": "Enabled"
+        },
         "modelSettings": {
           "modelId": "azureml://registries/azureml/models/Aurora/versions/4"
-        },
-        "authMode": "Key"
+        }
       }
     },
     {
