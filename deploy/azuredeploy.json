@@ -61,6 +61,21 @@
       "metadata": {
         "description": "Set to true to deploy Microsoft Planetary Computer Pro GeoCatalog."
       }
+    },
+    "auroraVmSku": {
+      "type": "string",
+      "defaultValue": "Standard_NC24ads_A100_v4",
+      "metadata": {
+        "description": "VM SKU for the Aurora managed compute deployment. Must be a GPU-enabled SKU with sufficient VRAM."
+      }
+    },
+    "auroraInstanceCount": {
+      "type": "int",
+      "defaultValue": 1,
+      "minValue": 1,
+      "metadata": {
+        "description": "Number of VM instances for the Aurora deployment."
+      }
     }
   },
   "variables": {
@@ -209,23 +224,41 @@
       }
     },
     {
-      "comments": "Aurora weather model serverless endpoint",
+      "comments": "Online endpoint for Aurora weather model (managed compute)",
       "condition": "[parameters('deployAIFoundry')]",
-      "type": "Microsoft.MachineLearningServices/workspaces/serverlessEndpoints",
-      "apiVersion": "2025-12-01",
+      "type": "Microsoft.MachineLearningServices/workspaces/onlineEndpoints",
+      "apiVersion": "2024-04-01",
       "name": "[concat(variables('aiProjectName'), '/aurora-endpoint')]",
       "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
       "dependsOn": [
         "[resourceId('Microsoft.MachineLearningServices/workspaces', variables('aiProjectName'))]"
       ],
       "properties": {
         "authMode": "Key",
-        "contentSafety": {
-          "contentSafetyStatus": "Enabled"
-        },
-        "modelSettings": {
-          "modelId": "azureml://registries/azureml/models/Aurora/versions/4"
-        }
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "comments": "Aurora model deployment on managed compute",
+      "condition": "[parameters('deployAIFoundry')]",
+      "type": "Microsoft.MachineLearningServices/workspaces/onlineEndpoints/deployments",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(variables('aiProjectName'), '/aurora-endpoint/aurora-deployment')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.MachineLearningServices/workspaces/onlineEndpoints', variables('aiProjectName'), 'aurora-endpoint')]"
+      ],
+      "sku": {
+        "name": "Default",
+        "capacity": "[parameters('auroraInstanceCount')]"
+      },
+      "properties": {
+        "model": "azureml://registries/azureml/models/Aurora/versions/4",
+        "instanceType": "[parameters('auroraVmSku')]",
+        "endpointComputeType": "Managed"
       }
     },
     {
@@ -274,7 +307,7 @@
     "auroraEndpointUri": {
       "condition": "[parameters('deployAIFoundry')]",
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.MachineLearningServices/workspaces/serverlessEndpoints', variables('aiProjectName'), 'aurora-endpoint')).inferenceEndpoint.uri]"
+      "value": "[reference(resourceId('Microsoft.MachineLearningServices/workspaces/onlineEndpoints', variables('aiProjectName'), 'aurora-endpoint')).scoringUri]"
     },
     "configurationInstructions": {
       "type": "string",
