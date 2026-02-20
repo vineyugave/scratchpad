@@ -209,6 +209,23 @@
       }
     },
     {
+      "comments": "Aurora weather model serverless endpoint",
+      "condition": "[parameters('deployAIFoundry')]",
+      "type": "Microsoft.MachineLearningServices/workspaces/serverlessEndpoints",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(variables('aiProjectName'), '/aurora-endpoint')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.MachineLearningServices/workspaces', variables('aiProjectName'))]"
+      ],
+      "properties": {
+        "modelSettings": {
+          "modelId": "azureml://registries/azureml/models/Aurora/versions/4"
+        },
+        "authMode": "Key"
+      }
+    },
+    {
       "comments": "Microsoft Planetary Computer Pro GeoCatalog",
       "condition": "[parameters('deployGeoCatalog')]",
       "type": "Microsoft.Orbital/geoCatalogs",
@@ -251,9 +268,14 @@
       "type": "string",
       "value": "[concat('https://', variables('geoCatalogFullName'), '.spatio.azure.com/api/stac/v1')]"
     },
+    "auroraEndpointUri": {
+      "condition": "[parameters('deployAIFoundry')]",
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.MachineLearningServices/workspaces/serverlessEndpoints', variables('aiProjectName'), 'aurora-endpoint')).inferenceEndpoint.uri]"
+    },
     "configurationInstructions": {
       "type": "string",
-      "value": "After deployment, update your .env file with: 1) STAC_CATALOG_URL from geoCatalogEndpoint, 2) Generate a SAS token for AURORA_BLOB_STORAGE_SAS from the storage account, 3) Deploy the Aurora model to AI Foundry and get the endpoint/token for AURORA_FOUNDRY_ENDPOINT and AURORA_FOUNDRY_TOKEN"
+      "value": "After deployment, update your .env file with: 1) STAC_CATALOG_URL from geoCatalogEndpoint, 2) Generate a SAS token for AURORA_BLOB_STORAGE_SAS from the storage account, 3) Use auroraEndpointUri for AURORA_FOUNDRY_ENDPOINT and retrieve the key from the portal for AURORA_FOUNDRY_TOKEN"
     }
   }
 }
